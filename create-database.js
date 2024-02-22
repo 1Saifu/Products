@@ -143,3 +143,5 @@ const productsModel = mongoose.model("products", productsSchema);
 const offersModel = mongoose.model("offers", offersSchema);
 const suppliersModel = mongoose.model("suppliers", suppliersSchema);
 const ordersModel = mongoose.model("orders", ordersSchema);
+
+export{ productsModel, offersModel, suppliersModel, ordersModel };
