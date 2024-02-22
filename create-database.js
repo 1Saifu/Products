@@ -81,11 +81,13 @@ const {db} = await mongoose.connection;
 //     [
 //         {
 //             name: "Electronics Supplier Inc",
-//             contact: "John Doe (John@electronsupplier.com)",
+//             contact: "John Doe",
+//             email: "John@electronsupplier.com"
 //         },
 //         {
 //             name: "Fashion Supplier Co",
-//             contact: "Jane Smith (Jane@fashionsupplier.com)",
+//             contact: "Jane Smith",
+//             email: "Jane@fashionsupplier.com",
 //         }
 //     ]
 // )
@@ -120,7 +122,7 @@ const offersSchema = mongoose.Schema(
     {
         products: {type: String},
         price: {type: Number},
-        active: {type: String},
+        active: {type: Boolean},
     }
 );
 
@@ -128,6 +130,7 @@ const suppliersSchema = mongoose.Schema(
     {
         name: {type: String},
         contact: {type: String},
+        email: {type: String},
     }
 );
 
