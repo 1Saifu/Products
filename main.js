@@ -27,15 +27,27 @@ while(runApp){
 
 let input = user("Choose a number between 1-15: ")
 if(input == 1){
+
+    const allCategories = await productsModel.distinct("category"); //Distinct excluderar andra object utom category
+    console.log("All existing categories:")
+    console.log(allCategories);
     
+    const newCategory = user("Add a new category: ");
+
+    const newProductCategory = new productsModel({
+        category: newCategory
+    });
+
+    await newProductCategory.save();
+
 }
 
 else if(input == 2){
 
     const productName = user("Enter a product name: ");
 
-    const allCategories = await productsModel.distinct("category"); //Distinct excluderar andra object utom category
-    console.log("All categories:")
+    const allCategories = await productsModel.distinct("category"); 
+    console.log("All existing categories:")
     console.log(allCategories);
 
     const productCategory = user("Enter an existing category or add a new category: ");
@@ -70,8 +82,8 @@ else if(input == 2){
 
 else if(input == 3){
 
-    const allCategories = await productsModel.distinct("category"); //Distinct excluderar andra object utom category
-    console.log("All categories:")
+    const allCategories = await productsModel.distinct("category"); 
+    console.log("All existing categories:")
     console.log(allCategories);
 
     const inputCategory = user("Enter a category: ")
@@ -80,6 +92,26 @@ else if(input == 3){
 
     console.log("Products in choosen category:")
     console.log(viewProductByCategory);
+
+}
+
+else if(input == 4){
+
+    const allSuppliers = await suppliersModel.distinct("contact"); 
+    console.log("All suppliers:")
+    console.log(allSuppliers);
+
+    const enterSupplier = user("Enter the name of a supplier: ");
+    const supplier = await suppliersModel.findOne({ contact: enterSupplier });
+
+    if(supplier){
+        const suppliersProduct = await productsModel.find({ supplier: supplier._id });
+        console.log(`All products from ${enterSupplier}:`);
+        console.log(suppliersProduct);
+    }
+    else{
+        console.log(`Products from ${enterSupplier} not found`);
+    }
 
 }
 
