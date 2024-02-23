@@ -63,20 +63,26 @@ else if(input == 2){
         }
     }
 
+    const supplier = await suppliersModel.find({ name: productCategory });
+
+    //parseInt converts string to number
     const productPrice = parseInt(user("Enter the price for the product: "));
     const productCost = parseInt(user("Enter the product cost: "));
     const productStock = parseInt(user("Enter the stock amount for the product: "));
 
+    if(supplier){
     const newProduct = new productsModel({
         name: productName,
         category: productCategory,
         price: productPrice,
         cost: productCost,
         stock: productStock,
+        supplier: supplier._id,
     })
 
     await newProduct.save();
     console.log("New product has been added!")
+}
 
 }
 
@@ -112,6 +118,83 @@ else if(input == 4){
     else{
         console.log(`Products from ${enterSupplier} not found`);
     }
+
+}
+
+else if(input == 5){
+
+    const minPriceInput = parseInt(user("Enter the minimum price: "));
+    const maxPriceInput = parseInt(user("Enter the maxmimum price: "));
+
+    const myOfferRange = await offersModel.aggregate([
+        {
+            $lookup: {
+                from: "products",
+                localField: "products",
+                foreignField: "_id",
+                as: "productsInfo"
+            }
+        },
+        {
+            $match: {
+                price: { $gte: minPriceInput, $lte: maxPriceInput }
+            }
+        },
+        {
+            $project: {
+                _id: 0,
+                price: 1,
+                active: 1,
+                products: {
+                    $map: {
+                        input: "$productsInfo",
+                        as: "product",
+                        in: "$$product.name"
+                    }
+                }
+            }
+        }
+    ]);
+
+    console.log(`Offers within the price range ${minPriceInput} - ${maxPriceInput}`);
+    console.log(myOfferRange);
+    
+}
+
+else if(input == 6){
+
+    const allCategories = await productsModel.distinct("category"); 
+    console.log("All existing categories:")
+    console.log(allCategories);
+
+    const offerCategory = user("Enter a category to view offers: ");
+
+    const result = await offersModel.aggregate([
+        {
+            $lookup: {
+                from: "products",
+                localField: "products",
+                foreignField: "_id",
+                as: "productsInfo"
+            }
+        },
+        {
+            $match: {
+                "productsInfo.category": offerCategory
+            }
+        },
+        {
+            $project: {
+                _id: 0,
+                price: 1,
+                active: 1,
+                products: "$productsInfo.name"
+            }
+        }
+    ]);
+
+    console.log(`All offers containing products from the category ${offerCategory}:`);
+    console.log(result);
 
 }
 
