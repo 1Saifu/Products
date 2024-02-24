@@ -5,10 +5,26 @@ const con = await connect("mongodb://127.0.0.1:27017/product-saifu-adam");
 const {db} = await mongoose.connection;
 
 
+// const categoriesCol = await db.collection("categories")
+// const suppliersCol = await db.collection("suppliers");
 // const productsCol = await db.collection("products");
 // const offersCol = await db.collection("offers");
-// const suppliersCol = await db.collection("suppliers");
 // const ordersCol = await db.collection("orders");
+
+
+// const insertedCategories = await categoriesCol.insertMany([
+//     { name: "Electronics" },
+//     { name: "Clothing" },
+//     { name: "Home Appliances" },
+//     { name: "Beauty & Personal Care" },
+//     { name: "Sports & Outdoors" },
+// ])
+
+// const electronicsCategoryId = insertedCategories.insertedIds[0];
+// const fashionCategoryId = insertedCategories.insertedIds[1];
+// const homeCategoryId = insertedCategories.insertedIds[2];
+// const beautyCategoryId = insertedCategories.insertedIds[3];
+// const sportsCategoryId = insertedCategories.insertedIds[4];
 
 
 // const mySupplier = await suppliersCol.insertMany(
@@ -16,37 +32,48 @@ const {db} = await mongoose.connection;
 //         {
 //             name: "Electronics Supplier Inc",
 //             contact: "John Doe",
-//             email: "John@electronsupplier.com"
+//             email: "John@electronsupplier.com",
+//             category: electronicsCategoryId,
 //         },
 //         {
 //             name: "Fashion Supplier Co",
 //             contact: "Jane Smith",
 //             email: "Jane@fashionsupplier.com",
+//             category: fashionCategoryId,
 //         },
 //         {
 //             name: "Sports Supplier Co",
 //             contact: "Jackie Chan",
 //             email: "Jackie@sportssupplier.com",
+//             category: sportsCategoryId,
 //         },
 //         {
 //             name: "Home Supplier Co",
 //             contact: "Bruce Wayne",
 //             email: "Bruce@homesupplier.com",
+//             category: homeCategoryId,
+//         },
+//         {
+//             name: "Beauty Supplier Co",
+//             contact: "Britt Marie",
+//             email: "Marie@beautysupplier.com",
+//             category: beautyCategoryId,
 //         },
 //     ]
 // )
 
-// //Added index to different suppliers to conncect the suppliers to the products
 // const electronicsSupplierId = mySupplier.insertedIds[0];
 // const fashionSupplierId = mySupplier.insertedIds[1];
 // const sportsSupplierId = mySupplier.insertedIds[2];
 // const homeSupplierId = mySupplier.insertedIds[3];
+// const beautySupplierId = mySupplier.insertedIds[4];
+
 
 // const insertedProducts = await productsCol.insertMany(
 //     [
 //         {
 //             name: "Laptop",
-//             category: "Electronics",
+//             category: electronicsCategoryId,
 //             price: 1000,
 //             cost: 800,
 //             stock: 50,
@@ -54,7 +81,7 @@ const {db} = await mongoose.connection;
 //         },
 //         {
 //             name: "Smartphone",
-//             category: "Electronics",
+//             category: electronicsCategoryId,
 //             price: 800,
 //             cost: 600,
 //             stock: 40,
@@ -62,7 +89,7 @@ const {db} = await mongoose.connection;
 //         },
 //         {
 //             name: "T-shirt",
-//             category: "Clothing",
+//             category: fashionCategoryId,
 //             price: 20,
 //             cost: 10,
 //             stock: 100,
@@ -70,7 +97,7 @@ const {db} = await mongoose.connection;
 //         },
 //         {
 //             name: "Refrigerator",
-//             category: "Home Appliances",
+//             category: homeCategoryId,
 //             price: 1200,
 //             cost: 1000,
 //             stock: 30,
@@ -78,15 +105,15 @@ const {db} = await mongoose.connection;
 //         },
 //         {
 //             name: "Shampoo",
-//             category: "Beauty & Personal Care",
+//             category: beautyCategoryId,
 //             price: 10,
 //             cost: 5,
 //             stock: 80,
-//             supplier: fashionSupplierId,
+//             supplier: beautySupplierId,
 //         },
 //         {
 //             name: "Soccer Ball",
-//             category: "Sports & Outdoors",
+//             category: sportsCategoryId,
 //             price: 30,
 //             cost: 20,
 //             stock: 60,
@@ -117,7 +144,6 @@ const {db} = await mongoose.connection;
 //     ]
 // )
 
-
 // ordersCol.insertMany(
 //     [
 //         {
@@ -134,10 +160,14 @@ const {db} = await mongoose.connection;
 // )
 
 
+const categoriesSchema = mongoose.Schema({
+    name: {type: String}
+})
+
 const productsSchema = mongoose.Schema(
     {
         name: {type: String},
-        category: {type: String},
+        category: {type: mongoose.Schema.Types.ObjectId, ref: 'categories'},
         price: {type: Number},
         cost: {type: Number},
         stock: {type: Number},
@@ -159,6 +189,7 @@ const suppliersSchema = mongoose.Schema(
         name: {type: String},
         contact: {type: String},
         email: {type: String},
+        category: {type: mongoose.Schema.Types.ObjectId, ref: 'categories'},
     }
 );
 
@@ -171,8 +202,9 @@ const ordersSchema = mongoose.Schema(
 );
 
 const productsModel = mongoose.model("products", productsSchema);
+const categoriesModel = mongoose.model("categories", categoriesSchema);
 const offersModel = mongoose.model("offers", offersSchema);
 const suppliersModel = mongoose.model("suppliers", suppliersSchema);
 const ordersModel = mongoose.model("orders", ordersSchema);
 
-export{ productsModel, offersModel, suppliersModel, ordersModel };
+export{ productsModel, offersModel, suppliersModel, ordersModel, categoriesModel };
