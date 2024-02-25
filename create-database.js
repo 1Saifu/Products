@@ -215,12 +215,13 @@ const salesOrderModel = mongoose.model("sales_orders", salesOrderSchema);
 
 
 
+
 const productsModel = mongoose.model("products", productsSchema);
 const categoriesModel = mongoose.model("categories", categoriesSchema);
 const offersModel = mongoose.model("offers", offersSchema);
 const suppliersModel = mongoose.model("suppliers", suppliersSchema);
 const ordersModel = mongoose.model("orders", ordersSchema);
 
-export{ productsModel, offersModel, suppliersModel, ordersModel, categoriesModel,salesOrderModel };
+export{ productsModel, offersModel, suppliersModel, ordersModel, categoriesModel, salesOrderModel};
 
 

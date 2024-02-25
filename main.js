@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import prompt from "prompt-sync";
-import { productsModel, offersModel, suppliersModel, ordersModel, categoriesModel } from "./create-database.js"
+import { productsModel, offersModel, suppliersModel, ordersModel, categoriesModel, salesOrderModel } from "./create-database.js"
 
 const user = prompt();
 
@@ -480,20 +480,26 @@ else if (input == 12) {
 }
 
 else if (input == 13) {
-    console.log("Viewing all sales orders.");
+    console.log("Viewing all sales orders:");
 
-    const salesOrders = await ordersModel.find({}).populate('product offer').exec();
+    // Fetch all sales orders from the database
+    const allSalesOrders = await salesOrderModel.find({});
 
-    if (!salesOrders.length) {
-        console.log("No sales orders found.");
-        break;
-    }
-
-    salesOrders.forEach((order, index) => {
-        const totalCost = order.quantity * (order.product?.price || order.offer?.price || 0); // Simplified cost calculation
-        console.log(`Order ID: ${order._id}, Date: ${order.date.toISOString().split('T')[0]}, Status: ${order.status}, Total Cost: $${totalCost}`);
+    // Display details of each sales order
+    allSalesOrders.forEach((salesOrder, index) => {
+        console.log(`Sales Order ${index + 1}:`);
+        console.log(`Order Number: ${salesOrder._id}`);
+        console.log(`Date: ${salesOrder.orderDate}`);
+        console.log(`Status: ${salesOrder.status}`);
+        console.log(`Total Cost: $${salesOrder.totalCost}`);
+        console.log("-------------------------------------------");
     });
+
+    if (allSalesOrders.length === 0) {
+        console.log("No sales orders found.");
+    }
 }
+
 
 else if (input == 14) {
     console.log("Viewing sum of all profits:");
