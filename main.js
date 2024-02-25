@@ -28,7 +28,7 @@ while(runApp){
 let input = user("Choose a number between 1-15: ")
 if(input == 1){
 
-    const allCategories = await categoriesModel.distinct("name"); 
+    const allCategories = await categoriesModel.distinct("name"); //distinct chooses one object out of all of them
     console.log("All existing categories:")
     console.log(allCategories);
     
@@ -38,7 +38,7 @@ if(input == 1){
         name: myNewCategory
     });
 
-    await newCategory.save();
+    await newCategory.save(); //this will save it to the collection
 
     console.log("A new category has been added!");
 
@@ -54,9 +54,9 @@ else if(input == 2){
 
     const productCategory = user("Enter an existing category or add a new category: ");
 
-    const categoryObject = await categoriesModel.findOne({ name: productCategory });
+    let categoryObject = await categoriesModel.findOne({ name: productCategory }); //this will check if users category is inline with an existing category
 
-    if(!allCategories.includes(productCategory)){
+    if(!allCategories.includes(productCategory)){ //includes checks in an array if its true or false, so if there is no category in the existing array with categorys then it will create a new one
         const addNewCategory = user(`"${productCategory}" does not exist. Would you like to add it? (yes/no): `);
 
         if(addNewCategory.toLowerCase() === 'yes'){
@@ -75,28 +75,29 @@ else if(input == 2){
     console.log("All suppliers:")
     console.log(allSuppliers);
     
-    const supplierName = user("Enter the supplier name: ");
+    const supplierContact = user("Enter the supplier full name: ");
     
     let supplier= await suppliersModel.findOne({
-        name: supplierName,
+        contact: supplierContact,
         category: categoryObject._id
     })
 
 if(!supplier){
 
-    const supplierContact = user("Enter the supplier contact: ");
-    const supplierEmail = user("Enter the supplier email: ");
-
     const addNewSupplier = user("Supplier not found. Would you like to add a new supplier? (yes/no)");
 
     if(addNewSupplier.toLocaleLowerCase() === "yes"){
+
+        const supplierCompany = user("Enter the company name: ")
+        const supplierEmail = user("Enter the supplier email: ");
+
         supplier  = await suppliersModel.create({
-        name: supplierName,
+        company: supplierCompany,
         contact: supplierContact,
         email: supplierEmail,
         category: categoryObject._id,
         })
-        console.log(`${supplierName} has been added!`)
+        console.log(`${supplierContact} has been added!`)
     } else{
         console.log("Choose an existing supplier or add a new one")
     }
@@ -131,22 +132,22 @@ else if(input == 3){
 
     const viewProductByCategory = await productsModel.aggregate([
         {
-            $match: {
+            $match: { //Match will check if the name of the input category as the existing categories
                 category: {
                     $in: await categoriesModel.find({ name: inputCategory }).distinct("_id")
                 }
             }
         },
         {
-            $lookup: {
-                from: "suppliers",
-                localField: "supplier",
-                foreignField: "_id",
-                as: "suppliersInfo"
+            $lookup: { //Lookup will combine documents
+                from: "suppliers", //This takes the supplier collection
+                localField: "supplier", //This takes the supplier object from products collection
+                foreignField: "_id", //This combines the 2
+                as: "suppliersInfo" //the 2 will be known as this
             }
         },
         {
-            $project: {
+            $project: { //This is what will view, 1 will show the info and 0 will not show the info
                 name: 1,
                 price: 1,
                 cost: 1,
@@ -224,7 +225,7 @@ else if(input == 5){
 
 else if(input == 6){
 
-    const allCategories = await productsModel.distinct("category"); 
+    const allCategories = await categoriesModel.distinct("name"); 
     console.log("All existing categories:")
     console.log(allCategories);
 
@@ -240,8 +241,16 @@ else if(input == 6){
             }
         },
         {
+            $lookup: {
+                from: "categories",
+                localField: "productsInfo.category",
+                foreignField: "_id",
+                as: "categoryInfo"
+            }
+        },
+        {
             $match: {
-                "productsInfo.category": offerCategory
+                "categoryInfo.name": offerCategory
             }
         },
         {
@@ -254,8 +263,12 @@ else if(input == 6){
         }
     ]);
 
-    console.log(`All offers containing products from the category ${offerCategory}:`);
-    console.log(result);
+    if(result.length > 0){ 
+        console.log(`All offers containing products from the category ${offerCategory}:`);
+        console.log(result);
+    }else{
+        console.log(`No offer found in ${offerCategory}:`);
+    }
 
 }
 
