@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import prompt from "prompt-sync";
-import { productsModel, offersModel, suppliersModel, ordersModel, categoriesModel } from "./create-database.js"
+import { productsModel, offersModel, suppliersModel, ordersModel, categoriesModel, salesOrderModel} from "./create-database.js"
 
 const user = prompt();
 
@@ -380,31 +380,44 @@ else if (input == 9) {
 }
 
 else if (input == 10) {
-    const orderId = user("Enter the order ID: ");
-    const order = await ordersModel.findById(orderId).populate('offer product');
+    console.log("Select an order to ship:");
 
-    if (!order) {
-        console.log("Order not found.");
+    const allOrders = await ordersModel.find({ status: "pending" }).populate("product offer");
+    if (!allOrders.length) {
+        console.log("No pending orders found.");
         break;
     }
 
-    if (order.status === "shipped") {
-        console.log("Order has already been shipped.");
+    allOrders.forEach((order, index) => {
+        console.log(`${index + 1}. Order ID: ${order._id}, Status: ${order.status}`);
+    });
+
+    const selectedOrderIndex = user("Enter the number corresponding to the order you want to ship: ");
+    const selectedOrder = allOrders[selectedOrderIndex - 1]; // Adjust index to match array index
+
+    if (!selectedOrder) {
+        console.log("Invalid order selection.");
         break;
     }
 
-    // Assuming you have logic to distinguish between product and offer orders
-    if (order.product) {
-        await productsModel.updateOne({ _id: order.product._id }, { $inc: { stock: -order.quantity } });
-    } else if (order.offer) {
-        const offer = await offersModel.findById(order.offer._id).populate('products');
+    // Update order status to "shipped"
+    selectedOrder.status = "shipped";
+
+    // Update stock quantities of products and offers
+    if (selectedOrder.product) {
+        // Decrease stock quantity for the ordered product
+        await productsModel.updateOne({ _id: selectedOrder.product._id }, { $inc: { stock: -selectedOrder.quantity } });
+        console.log("Product stock updated.");
+    } else if (selectedOrder.offer) {
+        // Decrease stock quantity for each product in the offer
+        const offer = await offersModel.findById(selectedOrder.offer._id).populate("products");
         for (const product of offer.products) {
-            await productsModel.updateOne({ _id: product._id }, { $inc: { stock: -order.quantity } });
+            await productsModel.updateOne({ _id: product._id }, { $inc: { stock: -selectedOrder.quantity } });
         }
+        console.log("Offer stock updated.");
     }
 
-    order.status = "shipped";
-    await order.save();
+    await selectedOrder.save(); // Save the changes to the order
     console.log("Order shipped successfully.");
 }
 
@@ -453,29 +466,24 @@ else if(input == 12){
     console.log(allSuppliers);
 
 }
-
 else if (input == 13) {
-    const orders = await ordersModel.find({})
-        .populate('product offer')
-        .sort({ orderDate: -1 }); // Assuming orders are sorted by date in descending order
+    console.log("Viewing all sales orders.");
 
-    console.log("List of all sales orders:");
-    orders.forEach((order, index) => {
-        // Assuming you have logic to calculate total cost from the product or offer
-        // This example simplifies cost calculation and may need adjustment based on your actual data structure
-        let totalCost = 0;
-        if (order.product) {
-            totalCost = order.product.price * order.quantity; // Simplified example for individual product orders
-        } else if (order.offer) {
-            totalCost = order.offer.price * order.quantity; // Simplified example for offer orders
-        }
+    const salesOrders = await ordersModel.find({}).populate('product offer').exec();
 
-        console.log(`Order Number: ${index + 1}`);
-        console.log(`Date: ${order.orderDate.toDateString()}`);
-        console.log(`Status: ${order.status}`);
-        console.log(`Total Cost: $${totalCost}`);
-        console.log('---');
-    });
+    if (!salesOrders.length) {
+        console.log("No sales orders found.");
+    } else {
+        salesOrders.forEach((order, index) => {
+            let totalCost = 0;
+            if (order.product) {
+                totalCost = order.quantity * order.product.price;
+            } else if (order.offer) {
+                totalCost = order.offer.price;
+            }
+            console.log(`Order ID: ${order._id}, Date: ${order.date ? order.date.toISOString().split('T')[0] : 'N/A'}, Status: ${order.status}, Total Cost: $${totalCost}`);
+        });
+    }
 }
 
 
