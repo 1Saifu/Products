@@ -10,6 +10,7 @@ const {db} = await mongoose.connection;
 // const productsCol = await db.collection("products");
 // const offersCol = await db.collection("offers");
 // const ordersCol = await db.collection("orders");
+// const salesOrdersCol = await db.collection("salesOrders")
 
 
 // const insertedCategories = await categoriesCol.insertMany([
@@ -144,21 +145,22 @@ const {db} = await mongoose.connection;
 //     ]
 // )
 
-// ordersCol.insertMany(
+// const insertedOrders = await ordersCol.insertMany(
 //     [
 //         {
-//             offer: 1,
+//             offer: insertedOffer.insertedIds[0],
 //             quantity: 2,
 //             status: "pending",
 //         },
 //         {
-//             offer: 3,
+//             offer: insertedOffer.insertedIds[2],
 //             quantity: 1,
 //             status: "pending",
 //         },
 //     ]
 // )
 
+// const ordersId = insertedOrders.insertedIds;
 
 const categoriesSchema = mongoose.Schema({
     name: {type: String}
@@ -209,12 +211,16 @@ const salesOrderSchema = mongoose.Schema({
     orderDate: { type: Date, default: Date.now }
 });
 
-
 const salesOrderModel = mongoose.model("sales_orders", salesOrderSchema);
+
+
+
 const productsModel = mongoose.model("products", productsSchema);
 const categoriesModel = mongoose.model("categories", categoriesSchema);
 const offersModel = mongoose.model("offers", offersSchema);
 const suppliersModel = mongoose.model("suppliers", suppliersSchema);
 const ordersModel = mongoose.model("orders", ordersSchema);
 
-export{ productsModel, offersModel, suppliersModel, ordersModel, categoriesModel };
+export{ productsModel, offersModel, suppliersModel, ordersModel, categoriesModel,salesOrderModel };
+
+
