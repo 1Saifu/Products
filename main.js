@@ -318,7 +318,6 @@ else if (input == 7) {
 }
 
 
-
 else if (input == 8) {
     const productName = user("Enter the product name: ");
     const quantity = parseInt(user("Enter the quantity: "), 10);
@@ -370,28 +369,6 @@ else if (input == 9) {
     console.log("Order created successfully for the selected offer.");
 }
 
-
-
-// else if (input == 10) {
-//     const orderId = user("Enter the order ID to ship: ");
-//     const order = await ordersModel.findById(orderId);
-
-//     if (order && order.status === "pending") {
-//         // Assuming order contains either a product or an offer but not both
-//         if (order.product) {
-//             await productsModel.updateOne({ _id: order.product }, { $inc: { stock: -order.quantity } });
-//         } else if (order.offer) {
-//             const offer = await offersModel.findById(order.offer).populate("products");
-//             offer.products.forEach(async (product) => {
-//                 await productsModel.updateOne({ _id: product._id }, { $inc: { stock: -order.quantity } });
-//             });
-//         }
-//         await ordersModel.updateOne({ _id: orderId }, { status: "shipped" });
-//         console.log("Order shipped successfully.");
-//     } else {
-//         console.log("Order not found or has already been shipped.");
-//     }
-// }
 
 else if (input == 10) {
     console.log("Select an order to ship:");
