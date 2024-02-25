@@ -372,26 +372,68 @@ else if (input == 9) {
 
 
 
-else if (input == 10) {
-    const orderId = user("Enter the order ID to ship: ");
-    const order = await ordersModel.findById(orderId);
+// else if (input == 10) {
+//     const orderId = user("Enter the order ID to ship: ");
+//     const order = await ordersModel.findById(orderId);
 
-    if (order && order.status === "pending") {
-        // Assuming order contains either a product or an offer but not both
-        if (order.product) {
-            await productsModel.updateOne({ _id: order.product }, { $inc: { stock: -order.quantity } });
-        } else if (order.offer) {
-            const offer = await offersModel.findById(order.offer).populate("products");
-            offer.products.forEach(async (product) => {
-                await productsModel.updateOne({ _id: product._id }, { $inc: { stock: -order.quantity } });
-            });
-        }
-        await ordersModel.updateOne({ _id: orderId }, { status: "shipped" });
-        console.log("Order shipped successfully.");
+//     if (order && order.status === "pending") {
+//         // Assuming order contains either a product or an offer but not both
+//         if (order.product) {
+//             await productsModel.updateOne({ _id: order.product }, { $inc: { stock: -order.quantity } });
+//         } else if (order.offer) {
+//             const offer = await offersModel.findById(order.offer).populate("products");
+//             offer.products.forEach(async (product) => {
+//                 await productsModel.updateOne({ _id: product._id }, { $inc: { stock: -order.quantity } });
+//             });
+//         }
+//         await ordersModel.updateOne({ _id: orderId }, { status: "shipped" });
+//         console.log("Order shipped successfully.");
+//     } else {
+//         console.log("Order not found or has already been shipped.");
+//     }
+// }
+
+else if (input == 10) {
+    console.log("Select an order to ship:");
+
+    const allOrders = await ordersModel.find({ status: "pending" }).populate("product offer");
+    if (!allOrders.length) {
+        console.log("No pending orders found.");
     } else {
-        console.log("Order not found or has already been shipped.");
+        allOrders.forEach((order, index) => {
+            console.log(`${index + 1}. Order ID: ${order._id}, Status: ${order.status}`);
+        });
+
+        const selectedOrderIndex = parseInt(user("Enter the number corresponding to the order you want to ship: ")) - 1;
+
+        if (selectedOrderIndex < 0 || selectedOrderIndex >= allOrders.length) {
+            console.log("Invalid order selection.");
+        } else {
+            const selectedOrder = allOrders[selectedOrderIndex];
+
+            // Update order status to "shipped"
+            selectedOrder.status = "shipped";
+
+            // Update stock quantities of products and offers
+            if (selectedOrder.product) {
+                // Decrease stock quantity for the ordered product
+                await productsModel.updateOne({ _id: selectedOrder.product._id }, { $inc: { stock: -selectedOrder.quantity } });
+                console.log("Product stock updated.");
+            } else if (selectedOrder.offer) {
+                // Decrease stock quantity for each product in the offer
+                const offer = await offersModel.findById(selectedOrder.offer._id).populate("products");
+                for (const product of offer.products) {
+                    await productsModel.updateOne({ _id: product._id }, { $inc: { stock: -selectedOrder.quantity } });
+                }
+                console.log("Offer stock updated.");
+            }
+
+            await selectedOrder.save(); // Save the changes to the order
+            console.log("Order shipped successfully.");
+        }
     }
 }
+
 
 else if (input == 11) {
     const allSuppliers = await suppliersModel.find({}); 
@@ -490,4 +532,3 @@ else{
 
 
 await mongoose.connection.close();
-
