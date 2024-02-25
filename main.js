@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import prompt from "prompt-sync";
-import { productsModel, offersModel, suppliersModel, ordersModel, categoriesModel } from "./create-database.js"
+import { productsModel, offersModel, suppliersModel, ordersModel, categoriesModel, salesOrderModel } from "./create-database.js"
 
 const user = prompt();
 
@@ -318,7 +318,6 @@ else if (input == 7) {
 }
 
 
-
 else if (input == 8) {
     const productName = user("Enter the product name: ");
     const quantity = parseInt(user("Enter the quantity: "), 10);
@@ -370,28 +369,6 @@ else if (input == 9) {
     console.log("Order created successfully for the selected offer.");
 }
 
-
-
-// else if (input == 10) {
-//     const orderId = user("Enter the order ID to ship: ");
-//     const order = await ordersModel.findById(orderId);
-
-//     if (order && order.status === "pending") {
-//         // Assuming order contains either a product or an offer but not both
-//         if (order.product) {
-//             await productsModel.updateOne({ _id: order.product }, { $inc: { stock: -order.quantity } });
-//         } else if (order.offer) {
-//             const offer = await offersModel.findById(order.offer).populate("products");
-//             offer.products.forEach(async (product) => {
-//                 await productsModel.updateOne({ _id: product._id }, { $inc: { stock: -order.quantity } });
-//             });
-//         }
-//         await ordersModel.updateOne({ _id: orderId }, { status: "shipped" });
-//         console.log("Order shipped successfully.");
-//     } else {
-//         console.log("Order not found or has already been shipped.");
-//     }
-// }
 
 else if (input == 10) {
     console.log("Select an order to ship:");
@@ -480,20 +457,26 @@ else if (input == 12) {
 }
 
 else if (input == 13) {
-    console.log("Viewing all sales orders.");
+    console.log("Viewing all sales orders:");
 
-    const salesOrders = await ordersModel.find({}).populate('product offer').exec();
+    // Fetch all sales orders from the database
+    const allSalesOrders = await salesOrderModel.find({});
 
-    if (!salesOrders.length) {
-        console.log("No sales orders found.");
-        break;
-    }
-
-    salesOrders.forEach((order, index) => {
-        const totalCost = order.quantity * (order.product?.price || order.offer?.price || 0); // Simplified cost calculation
-        console.log(`Order ID: ${order._id}, Date: ${order.date.toISOString().split('T')[0]}, Status: ${order.status}, Total Cost: $${totalCost}`);
+    // Display details of each sales order
+    allSalesOrders.forEach((salesOrder, index) => {
+        console.log(`Sales Order ${index + 1}:`);
+        console.log(`Order Number: ${salesOrder._id}`);
+        console.log(`Date: ${salesOrder.orderDate}`);
+        console.log(`Status: ${salesOrder.status}`);
+        console.log(`Total Cost: $${salesOrder.totalCost}`);
+        console.log("-------------------------------------------");
     });
+
+    if (allSalesOrders.length === 0) {
+        console.log("No sales orders found.");
+    }
 }
+
 
 else if (input == 14) {
     console.log("Viewing sum of all profits:");
@@ -532,4 +515,3 @@ else{
 
 
 await mongoose.connection.close();
-
