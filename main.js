@@ -324,13 +324,13 @@ else if (input == 8) {
     const product = await productsModel.findOne({ name: productName });
     if (!product) {
         console.log("Product not found.");
-        return;
+        break;
     }
 
     const quantity = parseInt(user("Enter the quantity: "), 10);
     if (quantity > product.stock) {
         console.log("Insufficient stock.");
-        return;
+        break;
     }
 
     const order = new ordersModel({
@@ -351,7 +351,7 @@ else if (input == 9) {
 
     if (!offer || !offer.active) {
         console.log("Offer not found or is not active.");
-        return;
+        break;
     }
 
     const quantity = parseInt(user("Enter the quantity: "), 10);
@@ -372,12 +372,12 @@ else if (input == 10) {
 
     if (!order) {
         console.log("Order not found.");
-        return;
+        break;
     }
 
     if (order.status === "shipped") {
         console.log("Order has already been shipped.");
-        return;
+        break;
     }
 
     // Assuming you have logic to distinguish between product and offer orders
@@ -402,18 +402,13 @@ const allSuppliers = await suppliersModel.find({});
     console.log("All suppliers:")
     console.log(allSuppliers);
     
-    const supplierContact = user("Enter the supplier full name: ");
+    const supplierContact = user("Enter a full name for new supplier: ");
     
     let supplier= await suppliersModel.findOne({
         contact: supplierContact,
-        category: categoryObject._id
     })
 
 if(!supplier){
-
-    const addNewSupplier = user("Supplier not found. Would you like to add a new supplier? (yes/no)");
-
-    if(addNewSupplier.toLocaleLowerCase() === "yes"){
 
         const supplierCompany = user("Enter the company name: ")
         const supplierEmail = user("Enter the supplier email: ");
@@ -422,15 +417,20 @@ if(!supplier){
         company: supplierCompany,
         contact: supplierContact,
         email: supplierEmail,
-        category: categoryObject._id,
         })
+
         console.log(`${supplierContact} has been added!`)
-    } else{
-        console.log("Choose an existing supplier or add a new one")
-    }
+
+        const newCategoryName = user("Enter a new category for the supplier: ");
+        const newCategory = new categoriesModel({
+            name: newCategoryName
+        })
+
+        await newCategory.save()
+
+        console.log(`The category ${newCategoryName} has been added to the supplier!`)
 }
-
-
+}
 
 
 else if(input == 12){
@@ -497,6 +497,7 @@ else if (input == 14) {
 
 else if(input == 15){
     runApp = false;
+    break;
 }
 
 else{
