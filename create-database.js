@@ -209,10 +209,8 @@ const salesOrderSchema = mongoose.Schema({
     orderDate: { type: Date, default: Date.now }
 });
 
-const SalesOrderModel = mongoose.model("sales_orders", salesOrderSchema);
 
-
-
+const salesOrderModel = mongoose.model("sales_orders", salesOrderSchema);
 const productsModel = mongoose.model("products", productsSchema);
 const categoriesModel = mongoose.model("categories", categoriesSchema);
 const offersModel = mongoose.model("offers", offersSchema);
