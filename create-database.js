@@ -145,22 +145,21 @@ const {db} = await mongoose.connection;
 //     ]
 // )
 
-// const insertedOrders = await ordersCol.insertMany(
+// ordersCol.insertMany(
 //     [
 //         {
-//             offer: insertedOffer.insertedIds[0],
+//             offer: 1,
 //             quantity: 2,
 //             status: "pending",
 //         },
 //         {
-//             offer: insertedOffer.insertedIds[2],
+//             offer: 3,
 //             quantity: 1,
 //             status: "pending",
 //         },
 //     ]
 // )
 
-// const ordersId = insertedOrders.insertedIds;
 
 const categoriesSchema = mongoose.Schema({
     name: {type: String}
@@ -196,10 +195,10 @@ const suppliersSchema = mongoose.Schema(
 );
 
 const ordersSchema = mongoose.Schema({
-    offer: { type: mongoose.Schema.Types.ObjectId, ref: 'offers' }, // Reference to the 'offers' collection
+    offer: { type: mongoose.Schema.Types.ObjectId, ref: 'offers' }, // Updated to ObjectId reference
     product: { type: mongoose.Schema.Types.ObjectId, ref: 'products' }, // Reference to the 'products' collection
-    quantity: { type: Number },
-    status: { type: String },
+    quantity: {type: Number},
+    status: {type: String},
 });
 
 const salesOrderSchema = mongoose.Schema({
