@@ -398,13 +398,37 @@ else if (input == 10) {
 
 
 else if (input == 11) {
-    const suppliers = await suppliersModel.find({});
-    console.log("All suppliers:");
-    suppliers.forEach(supplier => {
-        console.log(`Name: ${supplier.company}, Contact: ${supplier.contact}, Email: ${supplier.email}`);
-    });
-}
+const allSuppliers = await suppliersModel.find({}); 
+    console.log("All suppliers:")
+    console.log(allSuppliers);
+    
+    const supplierContact = user("Enter the supplier full name: ");
+    
+    let supplier= await suppliersModel.findOne({
+        contact: supplierContact,
+        category: categoryObject._id
+    })
 
+if(!supplier){
+
+    const addNewSupplier = user("Supplier not found. Would you like to add a new supplier? (yes/no)");
+
+    if(addNewSupplier.toLocaleLowerCase() === "yes"){
+
+        const supplierCompany = user("Enter the company name: ")
+        const supplierEmail = user("Enter the supplier email: ");
+
+        supplier  = await suppliersModel.create({
+        company: supplierCompany,
+        contact: supplierContact,
+        email: supplierEmail,
+        category: categoryObject._id,
+        })
+        console.log(`${supplierContact} has been added!`)
+    } else{
+        console.log("Choose an existing supplier or add a new one")
+    }
+}
 
 
 
@@ -418,6 +442,31 @@ else if(input == 12){
 }
 
 else if (input == 13) {
+    const orders = await ordersModel.find({})
+        .populate('product offer')
+        .sort({ orderDate: -1 }); // Assuming orders are sorted by date in descending order
+
+    console.log("List of all sales orders:");
+    orders.forEach((order, index) => {
+        // Assuming you have logic to calculate total cost from the product or offer
+        // This example simplifies cost calculation and may need adjustment based on your actual data structure
+        let totalCost = 0;
+        if (order.product) {
+            totalCost = order.product.price * order.quantity; // Simplified example for individual product orders
+        } else if (order.offer) {
+            totalCost = order.offer.price * order.quantity; // Simplified example for offer orders
+        }
+
+        console.log(`Order Number: ${index + 1}`);
+        console.log(`Date: ${order.orderDate.toDateString()}`);
+        console.log(`Status: ${order.status}`);
+        console.log(`Total Cost: $${totalCost}`);
+        console.log('---');
+    });
+}
+
+
+else if (input == 14) {
     const allOrders = await ordersModel.find({ status: 'shipped' }).populate('offer product');
 
     let totalProfit = 0;
