@@ -272,13 +272,187 @@ else if(input == 6){
 
 }
 
-else if(input == 12){
+else if (input == 7) {
+    const offersStockStatus = await offersModel.aggregate([
+        {
+            $lookup: {
+                from: "products",
+                localField: "products",
+                foreignField: "_id",
+                as: "productDetails"
+            }
+        },
+        {
+            $project: {
+                offerId: "$_id",
+                allInStock: {
+                    $allElementsTrue: {
+                        $map: {
+                            input: "$productDetails",
+                            as: "product",
+                            in: { $gt: ["$$product.stock", 0] }
+                        }
+                    }
+                },
+                someInStock: {
+                    $gt: [{ $size: { $filter: {
+                        input: "$productDetails",
+                        as: "product",
+                        cond: { $gt: ["$$product.stock", 0] }
+                    }}}, 0]
+                }
+            }
+        },
+        {
+            $group: {
+                _id: null,
+                allProductsInStock: { $sum: { $cond: ["$allInStock", 1, 0] }},
+                someProductsInStock: { $sum: { $cond: [{ $and: ["$someInStock", { $not: ["$allInStock"] }] }, 1, 0] }},
+                noProductsInStock: { $sum: { $cond: [{ $not: ["$someInStock"] }, 1, 0] }}
+            }
+        }
+    ]);
 
-    const allSuppliers = await suppliersModel.find({}); 
-    console.log("All suppliers:")
-    console.log(allSuppliers);
-
+    console.log("Offer stock status summary:");
+    console.log(offersStockStatus);
 }
+
+
+
+else if (input == 8) {
+    const productName = user("Enter the product name: ");
+    const quantity = parseInt(user("Enter the quantity: "), 10);
+    const product = await productsModel.findOne({ name: productName });
+
+    if (product) {
+        await ordersModel.create({
+            product: product._id,
+            quantity: quantity,
+            status: "pending"
+        });
+        console.log("Order created successfully.");
+    } else {
+        console.log("Not enough stock or product not found.");
+    }
+}
+
+else if (input == 9) {
+    console.log("Creating an order for an offer.");
+
+    // Display all offers to the user
+    const offers = await offersModel.find({}).populate('products'); // Assuming 'products' field holds product IDs
+    console.log("Available offers:");
+    offers.forEach((offer, index) => {
+        // Assuming offer documents contain a 'products' field with product names after population
+        const productNames = offer.products.map(product => product.name).join(", ");
+        console.log(`${index + 1}. Offer ID: ${offer._id}, Products: ${productNames}, Price: $${offer.price}`);
+    });
+
+    // Prompt the user to select an offer
+    const offerIndex = parseInt(user("Enter the number of the offer you want to order: ")) - 1;
+    
+    const selectedOffer = offers[offerIndex];
+
+    // Prompt for the quantity
+    const quantity = parseInt(user("Enter the quantity: "));
+
+
+    // Create the order for the selected offer
+    const newOrder = new ordersModel({
+        offer: selectedOffer._id,
+        quantity: quantity,
+        status: "pending",
+    });
+
+    // Save the order
+    await newOrder.save();
+
+    console.log("Order created successfully for the selected offer.");
+}
+
+
+
+else if (input == 10) {
+    const orderId = user("Enter the order ID to ship: ");
+    const order = await ordersModel.findById(orderId);
+
+    if (order && order.status === "pending") {
+        // Assuming order contains either a product or an offer but not both
+        if (order.product) {
+            await productsModel.updateOne({ _id: order.product }, { $inc: { stock: -order.quantity } });
+        } else if (order.offer) {
+            const offer = await offersModel.findById(order.offer).populate("products");
+            offer.products.forEach(async (product) => {
+                await productsModel.updateOne({ _id: product._id }, { $inc: { stock: -order.quantity } });
+            });
+        }
+        await ordersModel.updateOne({ _id: orderId }, { status: "shipped" });
+        console.log("Order shipped successfully.");
+    } else {
+        console.log("Order not found or has already been shipped.");
+    }
+}
+
+else if (input == 11) {
+    const suppliers = await suppliersModel.find({});
+    console.log("All suppliers:");
+    suppliers.forEach(supplier => {
+        console.log(`Name: ${supplier.company}, Contact: ${supplier.contact}, Email: ${supplier.email}`);
+    });
+}
+
+
+else if (input == 12) {
+    const suppliers = await suppliersModel.find({});
+    console.log("All suppliers:");
+    suppliers.forEach(supplier => {
+        console.log(`Name: ${supplier.company}, Contact: ${supplier.contact}, Email: ${supplier.email}`);
+    });
+}
+
+else if (input == 13) {
+    console.log("Viewing all sales orders.");
+
+    const salesOrders = await ordersModel.find({}).populate('product offer').exec();
+
+    if (!salesOrders.length) {
+        console.log("No sales orders found.");
+        break;
+    }
+
+    salesOrders.forEach((order, index) => {
+        const totalCost = order.quantity * (order.product?.price || order.offer?.price || 0); // Simplified cost calculation
+        console.log(`Order ID: ${order._id}, Date: ${order.date.toISOString().split('T')[0]}, Status: ${order.status}, Total Cost: $${totalCost}`);
+    });
+}
+
+
+
+
+else if (input == 14) {
+    console.log("Viewing sum of all profits:");
+
+    // Calculate and sum up profits from all sales orders
+    const allOrders = await ordersModel.find({});
+    let totalProfit = 0;
+
+    for (const order of allOrders) {
+        // Calculate profit for each order
+        const totalRevenue = order.totalRevenue || calculateTotalRevenue(order);
+        const totalCost = calculateTotalCost(order);
+        const profit = totalRevenue - totalCost;
+
+        // Exclude profit tax (30%)
+        const profitAfterTax = profit * 0.7;
+
+        // Add profit to total
+        totalProfit += profitAfterTax;
+    }
+
+    console.log(`Total profit generated from all sales orders: $${totalProfit.toFixed(2)}`);
+}
+
+
 
 else if(input == 15){
     runApp = false;

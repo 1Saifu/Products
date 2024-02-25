@@ -193,13 +193,25 @@ const suppliersSchema = mongoose.Schema(
     }
 );
 
-const ordersSchema = mongoose.Schema(
-    {
-        offer: {type: Number},
-        quantity: {type: Number},
-        status: {type: String},
-    }
-);
+const ordersSchema = mongoose.Schema({
+    offer: {type: mongoose.Schema.Types.ObjectId, ref: 'offers'}, // Updated to ObjectId reference
+    product: { type: mongoose.Schema.Types.ObjectId, ref: 'products' }, // Reference to the 'products' collection
+    quantity: {type: Number},
+    status: {type: String},
+});
+
+const salesOrderSchema = mongoose.Schema({
+    orderId: { type: mongoose.Schema.Types.ObjectId },
+    totalRevenue: { type: Number },
+    totalCost: { type: Number },
+    profit: { type: Number },
+    profitAfterTax: { type: Number },
+    orderDate: { type: Date, default: Date.now }
+});
+
+const SalesOrderModel = mongoose.model("sales_orders", salesOrderSchema);
+
+
 
 const productsModel = mongoose.model("products", productsSchema);
 const categoriesModel = mongoose.model("categories", categoriesSchema);
