@@ -426,9 +426,6 @@ else if (input == 13) {
     });
 }
 
-
-
-
 else if (input == 14) {
     console.log("Viewing sum of all profits:");
 
