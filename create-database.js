@@ -30,31 +30,31 @@ const {db} = await mongoose.connection;
 // const mySupplier = await suppliersCol.insertMany(
 //     [
 //         {
-//             name: "Electronics Supplier Inc",
+//             company: "Electronics Supplier Inc",
 //             contact: "John Doe",
 //             email: "John@electronsupplier.com",
 //             category: electronicsCategoryId,
 //         },
 //         {
-//             name: "Fashion Supplier Co",
+//             company: "Fashion Supplier Co",
 //             contact: "Jane Smith",
 //             email: "Jane@fashionsupplier.com",
 //             category: fashionCategoryId,
 //         },
 //         {
-//             name: "Sports Supplier Co",
+//             company: "Sports Supplier Co",
 //             contact: "Jackie Chan",
 //             email: "Jackie@sportssupplier.com",
 //             category: sportsCategoryId,
 //         },
 //         {
-//             name: "Home Supplier Co",
+//             company: "Home Supplier Co",
 //             contact: "Bruce Wayne",
 //             email: "Bruce@homesupplier.com",
 //             category: homeCategoryId,
 //         },
 //         {
-//             name: "Beauty Supplier Co",
+//             company: "Beauty Supplier Co",
 //             contact: "Britt Marie",
 //             email: "Marie@beautysupplier.com",
 //             category: beautyCategoryId,
@@ -186,7 +186,7 @@ const offersSchema = mongoose.Schema(
 
 const suppliersSchema = mongoose.Schema(
     {
-        name: {type: String},
+        company: {type: String},
         contact: {type: String},
         email: {type: String},
         category: {type: mongoose.Schema.Types.ObjectId, ref: 'categories'},
