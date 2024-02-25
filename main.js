@@ -272,6 +272,131 @@ else if(input == 6){
 
 }
 
+
+else if (input == 7) {
+    const offersStockStatus = await offersModel.aggregate([
+        {
+            $lookup: {
+                from: "products",
+                localField: "products",
+                foreignField: "_id",
+                as: "productDetails"
+            }
+        },
+        {
+            $project: {
+                productsInStock: {
+                    $filter: {
+                        input: "$productDetails",
+                        as: "product",
+                        cond: { $gt: ["$$product.stock", 0] }
+                    }
+                },
+                totalProducts: { $size: "$productDetails" }
+            }
+        },
+        {
+            $project: {
+                allInStock: { $eq: [{$size: "$productsInStock"}, "$totalProducts"] },
+                someInStock: { $and: [{$gt: [{$size: "$productsInStock"}, 0]}, {$lt: [{$size: "$productsInStock"}, "$totalProducts"]}] },
+                noneInStock: { $eq: [{$size: "$productsInStock"}, 0] }
+            }
+        },
+        {
+            $group: {
+                _id: null,
+                allInStock: { $sum: { $cond: ["$allInStock", 1, 0] } },
+                someInStock: { $sum: { $cond: ["$someInStock", 1, 0] } },
+                noneInStock: { $sum: { $cond: ["$noneInStock", 1, 0] } }
+            }
+        }
+    ]);
+
+    console.log("Offers based on product stock availability:");
+    console.log(offersStockStatus);
+}
+
+
+else if (input == 8) {
+    const productName = user("Enter the product name: ");
+    const quantity = parseInt(user("Enter the quantity: "), 10);
+    const product = await productsModel.findOne({ name: productName });
+
+    if (!product || product.stock < quantity) {
+        console.log("Not enough stock or product does not exist.");
+    } else {
+        await ordersModel.create({
+            product: product._id,
+            quantity: quantity,
+            status: "pending"
+        });
+        console.log("Order created successfully.");
+    }
+}
+
+
+else if (input == 9) {
+    const offerId = user("Enter the offer ID: ");
+    const quantity = parseInt(user("Enter the quantity: "), 10);
+    const offer = await offersModel.findById(offerId);
+
+    if (!offer) {
+        console.log("Offer does not exist.");
+    } else {
+        await ordersModel.create({
+            offer: offer._id,
+            quantity: quantity,
+            status: "pending"
+        });
+        console.log("Order for offer created successfully.");
+    }
+}
+
+
+else if (input == 10) {
+    const orderId = user("Enter the order ID to ship: ");
+    const order = await ordersModel.findById(orderId);
+
+    if (!order || order.status === "shipped") {
+        console.log("Order does not exist or has already been shipped.");
+    } else {
+        // Update order status to shipped
+        order.status = "shipped";
+        await order.save();
+
+        // Decrease stock for product or products in offer
+        if (order.product) {
+            await productsModel.updateOne(
+                { _id: order.product },
+                { $inc: { stock: -order.quantity } }
+            );
+        } else if (order.offer) {
+            const offer = await offersModel.findById(order.offer).populate("products");
+            offer.products.forEach(async (product) => {
+                await productsModel.updateOne(
+                    { _id: product._id },
+                    { $inc: { stock: -order.quantity } } // Assuming quantity affects all products in the offer
+                );
+            });
+        }
+
+        console.log("Order shipped successfully.");
+    }
+}
+
+
+else if (input == 11) {
+    const suppliers = await suppliersModel.find({});
+    console.log("All suppliers:");
+    suppliers.forEach(supplier => {
+        console.log(`Name: ${supplier.company}, Contact: ${supplier.contact}, Email: ${supplier.email}`);
+    });
+}
+
+
+
+
+
 else if(input == 12){
 
     const allSuppliers = await suppliersModel.find({}); 
@@ -279,6 +404,35 @@ else if(input == 12){
     console.log(allSuppliers);
 
 }
+
+else if (input == 13) {
+    const allOrders = await ordersModel.find({ status: 'shipped' }).populate('offer product');
+
+    let totalProfit = 0;
+    for (let order of allOrders) {
+        if (order.product) {
+            // For orders directly linked to products
+            const product = await productsModel.findById(order.product);
+            const profitPerProduct = (product.price - product.cost) * order.quantity;
+            totalProfit += profitPerProduct;
+        } else if (order.offer) {
+            // For orders linked to offers
+            const offer = await offersModel.findById(order.offer).populate({
+                path: 'products',
+                model: 'Product'
+            });
+            let offerProfit = 0;
+            for (let product of offer.products) {
+                const profitPerProduct = (product.price - product.cost) * order.quantity; // Assuming same quantity for all products in the offer
+                offerProfit += profitPerProduct;
+            }
+            totalProfit += offerProfit;
+        }
+    }
+
+    console.log(`Total profit from all shipped orders (excluding taxes): $${totalProfit}`);
+}
+
 
 else if(input == 15){
     runApp = false;
