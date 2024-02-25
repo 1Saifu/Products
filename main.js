@@ -280,109 +280,121 @@ else if (input == 7) {
                 from: "products",
                 localField: "products",
                 foreignField: "_id",
-                as: "productDetails"
+                as: "productsDetails"
             }
         },
         {
-            $project: {
-                productsInStock: {
-                    $filter: {
-                        input: "$productDetails",
-                        as: "product",
-                        cond: { $gt: ["$$product.stock", 0] }
+            $addFields: {
+                allInStock: {
+                    $allElementsTrue: {
+                        $map: {
+                            input: "$productsDetails",
+                            as: "product",
+                            in: { $gt: ["$$product.stock", 0] }
+                        }
                     }
                 },
-                totalProducts: { $size: "$productDetails" }
-            }
-        },
-        {
-            $project: {
-                allInStock: { $eq: [{$size: "$productsInStock"}, "$totalProducts"] },
-                someInStock: { $and: [{$gt: [{$size: "$productsInStock"}, 0]}, {$lt: [{$size: "$productsInStock"}, "$totalProducts"]}] },
-                noneInStock: { $eq: [{$size: "$productsInStock"}, 0] }
+                someInStock: {
+                    $gt: [{ $size: { $filter: {
+                        input: "$productsDetails",
+                        as: "product",
+                        cond: { $gt: ["$$product.stock", 0] }
+                    }}}, 0]
+                }
             }
         },
         {
             $group: {
                 _id: null,
-                allInStock: { $sum: { $cond: ["$allInStock", 1, 0] } },
-                someInStock: { $sum: { $cond: ["$someInStock", 1, 0] } },
-                noneInStock: { $sum: { $cond: ["$noneInStock", 1, 0] } }
+                allProductsInStock: { $sum: { $cond: ["$allInStock", 1, 0] }},
+                someProductsInStock: { $sum: { $cond: [{ $and: ["$someInStock", { $not: "$allInStock" }] }, 1, 0] }},
+                noProductsInStock: { $sum: { $cond: [{ $not: "$someInStock" }, 1, 0] }}
             }
         }
     ]);
 
-    console.log("Offers based on product stock availability:");
+    console.log("Offers based on stock availability:");
     console.log(offersStockStatus);
 }
 
 
+
 else if (input == 8) {
     const productName = user("Enter the product name: ");
-    const quantity = parseInt(user("Enter the quantity: "), 10);
     const product = await productsModel.findOne({ name: productName });
-
-    if (!product || product.stock < quantity) {
-        console.log("Not enough stock or product does not exist.");
-    } else {
-        await ordersModel.create({
-            product: product._id,
-            quantity: quantity,
-            status: "pending"
-        });
-        console.log("Order created successfully.");
+    if (!product) {
+        console.log("Product not found.");
+        return;
     }
+
+    const quantity = parseInt(user("Enter the quantity: "), 10);
+    if (quantity > product.stock) {
+        console.log("Insufficient stock.");
+        return;
+    }
+
+    const order = new ordersModel({
+        product: product._id, // Assuming your ordersSchema is adjusted to reference products
+        quantity,
+        status: "pending"
+    });
+
+    await order.save();
+    console.log("Order created successfully for product:", productName);
 }
+
 
 
 else if (input == 9) {
     const offerId = user("Enter the offer ID: ");
-    const quantity = parseInt(user("Enter the quantity: "), 10);
     const offer = await offersModel.findById(offerId);
 
-    if (!offer) {
-        console.log("Offer does not exist.");
-    } else {
-        await ordersModel.create({
-            offer: offer._id,
-            quantity: quantity,
-            status: "pending"
-        });
-        console.log("Order for offer created successfully.");
+    if (!offer || !offer.active) {
+        console.log("Offer not found or is not active.");
+        return;
     }
+
+    const quantity = parseInt(user("Enter the quantity: "), 10);
+    const order = new ordersModel({
+        offer: offer._id,
+        quantity,
+        status: "pending"
+    });
+
+    await order.save();
+    console.log("Order created successfully for offer ID:", offerId);
 }
 
 
 else if (input == 10) {
-    const orderId = user("Enter the order ID to ship: ");
-    const order = await ordersModel.findById(orderId);
+    const orderId = user("Enter the order ID: ");
+    const order = await ordersModel.findById(orderId).populate('offer product');
 
-    if (!order || order.status === "shipped") {
-        console.log("Order does not exist or has already been shipped.");
-    } else {
-        // Update order status to shipped
-        order.status = "shipped";
-        await order.save();
-
-        // Decrease stock for product or products in offer
-        if (order.product) {
-            await productsModel.updateOne(
-                { _id: order.product },
-                { $inc: { stock: -order.quantity } }
-            );
-        } else if (order.offer) {
-            const offer = await offersModel.findById(order.offer).populate("products");
-            offer.products.forEach(async (product) => {
-                await productsModel.updateOne(
-                    { _id: product._id },
-                    { $inc: { stock: -order.quantity } } // Assuming quantity affects all products in the offer
-                );
-            });
-        }
-
-        console.log("Order shipped successfully.");
+    if (!order) {
+        console.log("Order not found.");
+        return;
     }
+
+    if (order.status === "shipped") {
+        console.log("Order has already been shipped.");
+        return;
+    }
+
+    // Assuming you have logic to distinguish between product and offer orders
+    if (order.product) {
+        await productsModel.updateOne({ _id: order.product._id }, { $inc: { stock: -order.quantity } });
+    } else if (order.offer) {
+        const offer = await offersModel.findById(order.offer._id).populate('products');
+        for (const product of offer.products) {
+            await productsModel.updateOne({ _id: product._id }, { $inc: { stock: -order.quantity } });
+        }
+    }
+
+    order.status = "shipped";
+    await order.save();
+    console.log("Order shipped successfully.");
 }
+
 
 
 else if (input == 11) {
