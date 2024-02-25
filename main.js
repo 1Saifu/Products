@@ -346,25 +346,38 @@ else if (input == 8) {
 
 
 else if (input == 9) {
-    const offerId = user("Enter the offer ID: ");
-    const offer = await offersModel.findById(offerId);
+    console.log("Creating an order for an offer.");
 
-    if (!offer || !offer.active) {
-        console.log("Offer not found or is not active.");
-        break;
-    }
-
-    const quantity = parseInt(user("Enter the quantity: "), 10);
-    const order = new ordersModel({
-        offer: offer._id,
-        quantity,
-        status: "pending"
+    // Display all offers to the user
+    const offers = await offersModel.find({}).populate('products'); // Assuming 'products' field holds product IDs
+    console.log("Available offers:");
+    offers.forEach((offer, index) => {
+        // Assuming offer documents contain a 'products' field with product names after population
+        const productNames = offer.products.map(product => product.name).join(", ");
+        console.log(`${index + 1}. Offer ID: ${offer._id}, Products: ${productNames}, Price: $${offer.price}`);
     });
 
-    await order.save();
-    console.log("Order created successfully for offer ID:", offerId);
-}
+    // Prompt the user to select an offer
+    const offerIndex = parseInt(user("Enter the number of the offer you want to order: ")) - 1;
+    
+    const selectedOffer = offers[offerIndex];
 
+    // Prompt for the quantity
+    const quantity = parseInt(user("Enter the quantity: "));
+
+
+    // Create the order for the selected offer
+    const newOrder = new ordersModel({
+        offer: selectedOffer._id,
+        quantity: quantity,
+        status: "pending",
+    });
+
+    // Save the order
+    await newOrder.save();
+
+    console.log("Order created successfully for the selected offer.");
+}
 
 else if (input == 10) {
     const orderId = user("Enter the order ID: ");
