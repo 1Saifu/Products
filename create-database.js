@@ -145,21 +145,22 @@ const {db} = await mongoose.connection;
 //     ]
 // )
 
-// ordersCol.insertMany(
+// const insertedOrders = await ordersCol.insertMany(
 //     [
 //         {
-//             offer: 1,
+//             offer: insertedOffer.insertedIds[0],
 //             quantity: 2,
 //             status: "pending",
 //         },
 //         {
-//             offer: 3,
+//             offer: insertedOffer.insertedIds[2],
 //             quantity: 1,
 //             status: "pending",
 //         },
 //     ]
 // )
 
+// const ordersId = insertedOrders.insertedIds;
 
 const categoriesSchema = mongoose.Schema({
     name: {type: String}
