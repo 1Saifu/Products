@@ -394,12 +394,39 @@ else if (input == 10) {
 }
 
 else if (input == 11) {
-    const suppliers = await suppliersModel.find({});
-    console.log("All suppliers:");
-    suppliers.forEach(supplier => {
-        console.log(`Name: ${supplier.company}, Contact: ${supplier.contact}, Email: ${supplier.email}`);
-    });
-}
+    const allSuppliers = await suppliersModel.find({}); 
+        console.log("All suppliers:")
+        console.log(allSuppliers);
+        
+        const supplierContact = user("Enter a full name for new supplier: ");
+        
+        let supplier= await suppliersModel.findOne({
+            contact: supplierContact,
+        })
+    
+    if(!supplier){
+    
+            const supplierCompany = user("Enter the company name: ")
+            const supplierEmail = user("Enter the supplier email: ");
+    
+            supplier  = await suppliersModel.create({
+            company: supplierCompany,
+            contact: supplierContact,
+            email: supplierEmail,
+            })
+    
+            console.log(`${supplierContact} has been added!`)
+    
+            const newCategoryName = user("Enter a new category for the supplier: ");
+            const newCategory = new categoriesModel({
+                name: newCategoryName
+            })
+    
+            await newCategory.save()
+    
+            console.log(`The category ${newCategoryName} has been added to the supplier!`)
+    }
+    }
 
 
 else if (input == 12) {
