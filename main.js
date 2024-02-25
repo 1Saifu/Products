@@ -380,47 +380,55 @@ else if (input == 9) {
 }
 
 else if (input == 10) {
-    console.log("Select an order to ship:");
+    // Retrieve all pending orders with populated 'offer' field
+    const pendingOrders = await ordersModel.find({ status: "pending" }).populate('offer');
 
-    const allOrders = await ordersModel.find({ status: "pending" }).populate("product offer");
-    if (!allOrders.length) {
-        console.log("No pending orders found.");
-        break;
+    if (pendingOrders.length === 0) {
+        console.log("No pending orders to ship.");
+        continue; // Continue to the next iteration of the loop
     }
 
-    allOrders.forEach((order, index) => {
-        console.log(`${index + 1}. Order ID: ${order._id}, Status: ${order.status}`);
+    console.log("Pending Orders:");
+    pendingOrders.forEach((order, index) => {
+        console.log(`${index + 1}. Order ID: ${order._id}`);
     });
 
-    const selectedOrderIndex = user("Enter the number corresponding to the order you want to ship: ");
-    const selectedOrder = allOrders[selectedOrderIndex - 1]; // Adjust index to match array index
+    const orderIndex = user("Enter the number of the order to be shipped: ");
+    const selectedOrder = pendingOrders[orderIndex - 1];
 
     if (!selectedOrder) {
-        console.log("Invalid order selection.");
-        break;
+        console.log("Invalid selection.");
+        continue; // Continue to the next iteration of the loop
     }
 
-    // Update order status to "shipped"
+    // Check if the selected order contains valid offer ObjectId references
+    if (!selectedOrder.offer || !Array.isArray(selectedOrder.offer) || selectedOrder.offer.length === 0) {
+        console.log("No valid offers found in the selected order.");
+        continue; // Continue to the next iteration of the loop
+    }
+
+    // Check if each offer reference is a valid ObjectId
+    const isValidOfferReferences = selectedOrder.offer.every(offer => mongoose.Types.ObjectId.isValid(offer._id));
+
+    if (!isValidOfferReferences) {
+        console.log("Invalid offer references in the selected order.");
+        continue; // Continue to the next iteration of the loop
+    }
+
+    // Update the status of the selected sales order to "shipped"
     selectedOrder.status = "shipped";
+    await selectedOrder.save();
 
-    // Update stock quantities of products and offers
-    if (selectedOrder.product) {
-        // Decrease stock quantity for the ordered product
-        await productsModel.updateOne({ _id: selectedOrder.product._id }, { $inc: { stock: -selectedOrder.quantity } });
-        console.log("Product stock updated.");
-    } else if (selectedOrder.offer) {
-        // Decrease stock quantity for each product in the offer
-        const offer = await offersModel.findById(selectedOrder.offer._id).populate("products");
-        for (const product of offer.products) {
-            await productsModel.updateOne({ _id: product._id }, { $inc: { stock: -selectedOrder.quantity } });
-        }
-        console.log("Offer stock updated.");
+    // Decrease the stock quantities of the products and offers included in the selected order
+    for (const offer of selectedOrder.offer) {
+        // Decrease the stock of the offer
+        const updatedOffer = await offersModel.findById(offer._id);
+        updatedOffer.stock -= 1;
+        await updatedOffer.save();
     }
 
-    await selectedOrder.save(); // Save the changes to the order
-    console.log("Order shipped successfully.");
+    console.log("Order has been shipped successfully.");
 }
-
 
 
 else if (input == 11) {

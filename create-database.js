@@ -195,10 +195,10 @@ const suppliersSchema = mongoose.Schema(
 );
 
 const ordersSchema = mongoose.Schema({
-    offer: {type: mongoose.Schema.Types.ObjectId, ref: 'offers'}, // Updated to ObjectId reference
+    offer: { type: mongoose.Schema.Types.ObjectId, ref: 'offers' }, // Reference to the 'offers' collection
     product: { type: mongoose.Schema.Types.ObjectId, ref: 'products' }, // Reference to the 'products' collection
-    quantity: {type: Number},
-    status: {type: String},
+    quantity: { type: Number },
+    status: { type: String },
 });
 
 const salesOrderSchema = mongoose.Schema({
