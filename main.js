@@ -374,6 +374,89 @@ else if (input == 9) {
 }
 
 
+// else if (input == 10) {
+//     console.log("Select an order to ship:");
+
+//     const allOrders = await ordersModel.find({ status: "pending" }).populate("product offer");
+
+//     if (!allOrders.length) {
+//         console.log("No pending orders found.");
+//     } else {
+//         allOrders.forEach((order, index) => {
+//             console.log(`${index + 1}. Order ID: ${order._id}, Status: ${order.status}`);
+//         });
+
+//         const selectedOrderIndex = parseInt(user("Enter the number corresponding to the order you want to ship: ")) - 1;
+
+//         if (selectedOrderIndex < 0 || selectedOrderIndex >= allOrders.length) {
+//             console.log("Invalid order selection.");
+//         } else {
+//             const selectedOrder = allOrders[selectedOrderIndex];
+
+//             async function calculateTotalCost(order) {
+//                 let totalCost = 0;
+
+//                 if (order.product) {
+//                     const product = await productsModel.findById(order.product);
+//                     totalCost = product.price * order.quantity; // Use product price
+//                 } else if (order.offer) {
+//                     const offer = await offersModel.findById(order.offer);
+//                     totalCost = offer.price * order.quantity; // Use offer price
+//                 } else if (order.products && order.products.length > 10) {
+//                     // If the order contains more than 10 products, apply a 10% discount
+//                     const products = await productsModel.find({ _id: { $in: order.products } });
+//                     let subTotal = 0;
+
+//                     for (const product of products) {
+//                         subTotal += product.price * order.quantity; // Use product price
+//                     }
+
+//                     totalCost = subTotal; // Apply the discount
+//                 }
+
+//                 return totalCost;
+//             }
+
+//             let totalCost = await calculateTotalCost(selectedOrder);
+
+//             // Update order status to "shipped"
+//             selectedOrder.status = "shipped";
+//             selectedOrder.totalCost = totalCost;
+
+//             // Update stock quantities of products and offers
+//             if (selectedOrder.product) {
+//                 // Decrease stock quantity for the ordered product
+//                 await productsModel.updateOne({ _id: selectedOrder.product._id }, { $inc: { stock: -selectedOrder.quantity } });
+//                 console.log("Product stock updated.");
+//             } else if (selectedOrder.offer) {
+//                 // Decrease stock quantity for each product in the offer
+//                 const offer = await offersModel.findById(selectedOrder.offer._id).populate("products");
+//                 for (const product of offer.products) {
+//                     await productsModel.updateOne({ _id: product._id }, { $inc: { stock: -selectedOrder.quantity } });
+//                 }
+//                 console.log("Offer stock updated.");
+//             }
+
+//                 await selectedOrder.save(); 
+//                 console.log("Order shipped successfully.");
+    
+    
+//                 const salesRecord = await salesOrderModel.create({
+//                     order: selectedOrder._id,
+//                     status: selectedOrder.status,
+//                     totalCost: totalCost,
+//                 });
+    
+//                 await salesRecord.save();
+//                 console.log("Order added to the sales collection.");
+            
+//         }
+//     }
+// }
+
+
+
+
 else if (input == 10) {
     console.log("Select an order to ship:");
 
@@ -419,40 +502,50 @@ else if (input == 10) {
 
             let totalCost = await calculateTotalCost(selectedOrder);
 
+            // Calculate total revenue (price - cost of the product)
+            let totalRevenue = 0;
+            if (selectedOrder.product) {
+                const product = await productsModel.findById(selectedOrder.product);
+                totalRevenue = (product.price - product.cost) * selectedOrder.quantity;
+            } else if (selectedOrder.offer) {
+                const offer = await offersModel.findById(selectedOrder.offer);
+                totalRevenue = (offer.price - totalCost); // Assuming totalCost includes the cost of products in the offer
+            }
+
             // Update order status to "shipped"
             selectedOrder.status = "shipped";
             selectedOrder.totalCost = totalCost;
 
             // Update stock quantities of products and offers
-            if (selectedOrder.product) {
-                // Decrease stock quantity for the ordered product
-                await productsModel.updateOne({ _id: selectedOrder.product._id }, { $inc: { stock: -selectedOrder.quantity } });
-                console.log("Product stock updated.");
-            } else if (selectedOrder.offer) {
-                // Decrease stock quantity for each product in the offer
-                const offer = await offersModel.findById(selectedOrder.offer._id).populate("products");
-                for (const product of offer.products) {
-                    await productsModel.updateOne({ _id: product._id }, { $inc: { stock: -selectedOrder.quantity } });
-                }
-                console.log("Offer stock updated.");
-            }
+            // ... (same as before)
 
-                await selectedOrder.save(); 
-                console.log("Order shipped successfully.");
+            await selectedOrder.save(); 
+            console.log("Order shipped successfully.");
+
+            // Calculate tax after profit (assuming 30% tax on profit)
+            const profit = totalRevenue * 0.7; // 70% profit
+            const taxAfterProfit = profit * 0.3; // 30% tax on profit
+
+            console.log(`Total Revenue: $${totalRevenue}`);
+            console.log(`Tax After Profit: $${taxAfterProfit}`);
     
-    
-                const salesRecord = await salesOrderModel.create({
-                    order: selectedOrder._id,
-                    status: selectedOrder.status,
-                    totalCost: totalCost,
-                });
-    
-                await salesRecord.save();
-                console.log("Order added to the sales collection.");
-            
+            const salesRecord = await salesOrderModel.create({
+                order: selectedOrder._id,
+                status: selectedOrder.status,
+                totalCost: totalCost,
+                totalRevenue: totalRevenue,
+                profit: profit,
+                profitAfterTax: profit - taxAfterProfit,
+            });
+
+            await salesRecord.save();
+            console.log("Order added to the sales collection.");
         }
     }
 }
+
+
+
 
 
 else if (input == 11) {
@@ -523,44 +616,73 @@ else if (input == 13) {
 
 
 else if (input == 14) {
-    // Calculate and display the sum of all profits using aggregation
     const profitData = await salesOrderModel.aggregate([
         {
             $match: { status: "shipped" }
         },
         {
             $lookup: {
+                from: "orders",
+                localField: "order",
+                foreignField: "_id",
+                as: "orderDetails"
+            }
+        },
+        {
+            $lookup: {
                 from: "offers",
-                localField: "order.offer",
+                localField: "orderDetails.offer",
                 foreignField: "_id",
                 as: "offerDetails"
             }
         },
         {
             $project: {
+                profitBeforeTax: {
+                    $cond: {
+                        if: {
+                            $gt: [{ $size: "$orderDetails.products" }, 10]
+                        },
+                        then: {
+                            $subtract: [
+                                "$totalCost",
+                                { $multiply: ["$totalCost", 0.1] } // Assuming a 10% discount
+                            ]
+                        },
+                        else: "$totalCost"
+                    }
+                },
+            }
+        },
+        {
+            $project: {
                 profit: {
-                    $subtract: [
-                        "$totalCost",
-                        { $multiply: ["$totalCost", 0.9] } // Assuming a 10% discount
-                    ]
+                    $multiply: ["$profitBeforeTax", 0.7] // Apply 70% profit
+                },
+            }
+        },
+        {
+            $project: {
+                profitAfterTax: {
+                    $multiply: ["$profit", 0.7] // Apply 30% tax on profit
                 }
             }
         },
         {
             $group: {
                 _id: null,
-                totalProfit: { $sum: "$profit" }
+                totalProfit: { $sum: "$profitAfterTax" }
             }
         }
     ]);
-
+    
     if (profitData.length > 0) {
-        console.log(`Sum of all profits (excluding profit tax): $${profitData[0].totalProfit}`);
+        console.log(`Sum of all profits (after tax): $${profitData[0].totalProfit}`);
     } else {
         console.log("No shipped orders found.");
     }
+    
 }
-
 
 
 
