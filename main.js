@@ -523,27 +523,44 @@ else if (input == 13) {
 
 
 else if (input == 14) {
-    console.log("Viewing sum of all profits:");
+    // Calculate and display the sum of all profits using aggregation
+    const profitData = await salesOrderModel.aggregate([
+        {
+            $match: { status: "shipped" }
+        },
+        {
+            $lookup: {
+                from: "offers",
+                localField: "order.offer",
+                foreignField: "_id",
+                as: "offerDetails"
+            }
+        },
+        {
+            $project: {
+                profit: {
+                    $subtract: [
+                        "$totalCost",
+                        { $multiply: ["$totalCost", 0.9] } // Assuming a 10% discount
+                    ]
+                }
+            }
+        },
+        {
+            $group: {
+                _id: null,
+                totalProfit: { $sum: "$profit" }
+            }
+        }
+    ]);
 
-    // Calculate and sum up profits from all sales orders
-    const allOrders = await ordersModel.find({});
-    let totalProfit = 0;
-
-    for (const order of allOrders) {
-        // Calculate profit for each order
-        const totalRevenue = order.totalRevenue || calculateTotalRevenue(order);
-        const totalCost = calculateTotalCost(order);
-        const profit = totalRevenue - totalCost;
-
-        // Exclude profit tax (30%)
-        const profitAfterTax = profit * 0.7;
-
-        // Add profit to total
-        totalProfit += profitAfterTax;
+    if (profitData.length > 0) {
+        console.log(`Sum of all profits (excluding profit tax): $${profitData[0].totalProfit}`);
+    } else {
+        console.log("No shipped orders found.");
     }
-
-    console.log(`Total profit generated from all sales orders: $${totalProfit.toFixed(2)}`);
 }
+
 
 
 
