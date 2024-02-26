@@ -523,7 +523,6 @@ else if (input == 13) {
 
 
 else if (input == 14) {
-    // Calculate and display the sum of all profits using aggregation
     const profitData = await salesOrderModel.aggregate([
         {
             $match: { status: "shipped" }
@@ -538,29 +537,40 @@ else if (input == 14) {
         },
         {
             $project: {
-                profit: {
-                    $subtract: [
-                        "$totalCost",
-                        { $multiply: ["$totalCost", 0.9] } // Assuming a 10% discount
-                    ]
+                // Calculate total revenue
+                totalRevenue: { $sum: { $multiply: ["$quantity", "$offerDetails.price"] } },
+                // Calculate total cost
+                totalCost: { $sum: { $multiply: ["$quantity", "$offerDetails.cost"] } }
+            }
+        },
+        {
+            $project: {
+                // Apply discount if quantity is more than 10
+                totalRevenue: {
+                    $cond: { if: { $gt: ["$quantity", 10] }, then: { $multiply: ["$totalRevenue", 0.9] }, else: "$totalRevenue" }
                 }
             }
         },
         {
-            $group: {
-                _id: null,
-                totalProfit: { $sum: "$profit" }
+            $project: {
+                // Calculate profit before tax
+                profitBeforeTax: { $subtract: ["$totalRevenue", "$totalCost"] }
+            }
+        },
+        {
+            $project: {
+                // Apply profit tax (30%)
+                profitAfterTax: { $subtract: ["$profitBeforeTax", { $multiply: ["$profitBeforeTax", 0.3] }] }
             }
         }
     ]);
 
     if (profitData.length > 0) {
-        console.log(`Sum of all profits (excluding profit tax): $${profitData[0].totalProfit}`);
+        console.log(`Profit after tax: $${profitData[0].profitAfterTax}`);
     } else {
         console.log("No shipped orders found.");
     }
 }
-
 
 
 

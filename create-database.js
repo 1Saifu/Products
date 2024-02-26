@@ -231,3 +231,4 @@ const salesOrderModel = mongoose.model("sales_orders", salesOrderSchema);
 
 export{ productsModel, offersModel, suppliersModel, ordersModel, categoriesModel, salesOrderModel, };
 
+
