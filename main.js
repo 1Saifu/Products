@@ -507,10 +507,17 @@ else if (input == 10) {
             if (selectedOrder.product) {
                 const product = await productsModel.findById(selectedOrder.product);
                 totalRevenue = (product.price - product.cost) * selectedOrder.quantity;
+                totalCost = product.cost * selectedOrder.quantity; // Use product cost for total cost
             } else if (selectedOrder.offer) {
                 const offer = await offersModel.findById(selectedOrder.offer);
                 totalRevenue = (offer.price - totalCost); // Assuming totalCost includes the cost of products in the offer
             }
+
+            // Calculate profit
+            const profit = totalRevenue * 0.7; // 70% profit
+
+            // Calculate tax after profit (assuming 30% tax on profit)
+            const taxAfterProfit = profit * 0.3; // 30% tax on profit
 
             // Update order status to "shipped"
             selectedOrder.status = "shipped";
@@ -522,12 +529,8 @@ else if (input == 10) {
             await selectedOrder.save(); 
             console.log("Order shipped successfully.");
 
-            // Calculate tax after profit (assuming 30% tax on profit)
-            const profit = totalRevenue * 0.7; // 70% profit
-            const taxAfterProfit = profit * 0.3; // 30% tax on profit
-
             console.log(`Total Revenue: $${totalRevenue}`);
-            console.log(`Tax After Profit: $${taxAfterProfit}`);
+            console.log(`Profit After Tax: $${profit - taxAfterProfit}`);
     
             const salesRecord = await salesOrderModel.create({
                 order: selectedOrder._id,
@@ -543,6 +546,8 @@ else if (input == 10) {
         }
     }
 }
+
+
 
 
 
