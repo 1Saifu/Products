@@ -1,9 +1,6 @@
 import mongoose from "mongoose";
 import prompt from "prompt-sync";
 import { productsModel, offersModel, suppliersModel, ordersModel, categoriesModel, salesOrderModel, } from "./create-database.js"
-import { calculateTotalRevenue, calculateTotalCost } from "./utils.js";
-
-
 
 const user = prompt();
 
@@ -396,24 +393,31 @@ else if (input == 10) {
         } else {
             const selectedOrder = allOrders[selectedOrderIndex];
 
-
             async function calculateTotalCost(order) {
                 let totalCost = 0;
 
                 if (order.product) {
-                    // If the order is for a product, calculate cost based on product cost and quantity
                     const product = await productsModel.findById(order.product);
-                    totalCost = product.cost * order.quantity;
+                    totalCost = product.price * order.quantity; // Use product price
                 } else if (order.offer) {
-                    // If the order is for an offer, calculate cost based on offer price and quantity
                     const offer = await offersModel.findById(order.offer);
-                    totalCost = offer.price * order.quantity;
+                    totalCost = offer.price * order.quantity; // Use offer price
+                } else if (order.products && order.products.length > 10) {
+                    // If the order contains more than 10 products, apply a 10% discount
+                    const products = await productsModel.find({ _id: { $in: order.products } });
+                    let subTotal = 0;
+
+                    for (const product of products) {
+                        subTotal += product.price * order.quantity; // Use product price
+                    }
+
+                    totalCost = subTotal; // Apply the discount
                 }
 
                 return totalCost;
             }
 
-            const totalCost = await calculateTotalCost(selectedOrder)
+            let totalCost = await calculateTotalCost(selectedOrder);
 
             // Update order status to "shipped"
             selectedOrder.status = "shipped";
@@ -503,6 +507,7 @@ else if (input == 13) {
 
     // Display details of each sales order
     allSalesOrders.forEach((salesOrder, index) => {
+        console.log("-------------------------------------------");
         console.log(`Sales Order ${index + 1}:`);
         console.log(`Order Number: ${salesOrder._id}`);
         console.log(`Date: ${salesOrder.orderDate}`);
@@ -517,50 +522,45 @@ else if (input == 13) {
 }
 
 
-
-
 else if (input == 14) {
-    // Calculate and display the sum of all profits
-    const allSalesOrders = await salesOrderModel.find({ status: "shipped" }).populate("order");
-
-    let totalProfit = 0;
-
-    // Iterate through all shipped sales orders
-    for (const salesOrder of allSalesOrders) {
-        const order = salesOrder.order;
-
-        if (order && order.offer) {
-            // Calculate total revenue
-            const totalRevenue = salesOrder.totalRevenue;
-
-            // Calculate cost of goods sold
-            let costOfGoodsSold = salesOrder.totalCost;
-
-            // Check if the order contains more than 10 pieces of an offer
-            if (order.offer.products && order.offer.products.length > 10) {
-                // Reduce the total cost by 10%
-                costOfGoodsSold *= 0.9;
+    // Calculate and display the sum of all profits using aggregation
+    const profitData = await salesOrderModel.aggregate([
+        {
+            $match: { status: "shipped" }
+        },
+        {
+            $lookup: {
+                from: "offers",
+                localField: "order.offer",
+                foreignField: "_id",
+                as: "offerDetails"
             }
-
-            // Log total revenue and cost of goods sold for debugging
-            console.log(`Total Revenue: ${totalRevenue}`);
-            console.log(`Cost of Goods Sold: ${costOfGoodsSold}`);
-
-            // Check if totalRevenue and costOfGoodsSold are valid numbers
-            if (!isNaN(totalRevenue) && !isNaN(costOfGoodsSold)) {
-                // Calculate profit (excluding profit tax)
-                const profit = totalRevenue - costOfGoodsSold;
-
-                // Add profit to total
-                totalProfit += profit;
-            } else {
-                console.log("Invalid total revenue or cost of goods sold.");
+        },
+        {
+            $project: {
+                profit: {
+                    $subtract: [
+                        "$totalCost",
+                        { $multiply: ["$totalCost", 0.9] } // Assuming a 10% discount
+                    ]
+                }
+            }
+        },
+        {
+            $group: {
+                _id: null,
+                totalProfit: { $sum: "$profit" }
             }
         }
-    }
+    ]);
 
-    console.log(`Sum of all profits (excluding profit tax): $${totalProfit}`);
+    if (profitData.length > 0) {
+        console.log(`Sum of all profits (excluding profit tax): $${profitData[0].totalProfit}`);
+    } else {
+        console.log("No shipped orders found.");
+    }
 }
+
 
 
 
