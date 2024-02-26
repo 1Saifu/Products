@@ -393,24 +393,31 @@ else if (input == 10) {
         } else {
             const selectedOrder = allOrders[selectedOrderIndex];
 
-
             async function calculateTotalCost(order) {
                 let totalCost = 0;
 
                 if (order.product) {
-                    // If the order is for a product, calculate cost based on product cost and quantity
                     const product = await productsModel.findById(order.product);
-                    totalCost = product.cost * order.quantity;
+                    totalCost = product.price * order.quantity; // Use product price
                 } else if (order.offer) {
-                    // If the order is for an offer, calculate cost based on offer price and quantity
                     const offer = await offersModel.findById(order.offer);
-                    totalCost = offer.price * order.quantity;
+                    totalCost = offer.price * order.quantity; // Use offer price
+                } else if (order.products && order.products.length > 10) {
+                    // If the order contains more than 10 products, apply a 10% discount
+                    const products = await productsModel.find({ _id: { $in: order.products } });
+                    let subTotal = 0;
+
+                    for (const product of products) {
+                        subTotal += product.price * order.quantity; // Use product price
+                    }
+
+                    totalCost = subTotal; // Apply the discount
                 }
 
                 return totalCost;
             }
 
-            const totalCost = await calculateTotalCost(selectedOrder)
+            let totalCost = await calculateTotalCost(selectedOrder);
 
             // Update order status to "shipped"
             selectedOrder.status = "shipped";
@@ -500,6 +507,7 @@ else if (input == 13) {
 
     // Display details of each sales order
     allSalesOrders.forEach((salesOrder, index) => {
+        console.log("-------------------------------------------");
         console.log(`Sales Order ${index + 1}:`);
         console.log(`Order Number: ${salesOrder._id}`);
         console.log(`Date: ${salesOrder.orderDate}`);
