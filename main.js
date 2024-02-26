@@ -1,6 +1,9 @@
 import mongoose from "mongoose";
 import prompt from "prompt-sync";
 import { productsModel, offersModel, suppliersModel, ordersModel, categoriesModel, salesOrderModel, } from "./create-database.js"
+import { calculateTotalRevenue, calculateTotalCost } from "./utils.js";
+
+
 
 const user = prompt();
 
@@ -514,27 +517,49 @@ else if (input == 13) {
 }
 
 
-else if (input == 14) {
-    console.log("Viewing sum of all profits:");
 
-    // Calculate and sum up profits from all sales orders
-    const allOrders = await ordersModel.find({});
+
+else if (input == 14) {
+    // Calculate and display the sum of all profits
+    const allSalesOrders = await salesOrderModel.find({ status: "shipped" }).populate("order");
+
     let totalProfit = 0;
 
-    for (const order of allOrders) {
-        // Calculate profit for each order
-        const totalRevenue = order.totalRevenue || calculateTotalRevenue(order);
-        const totalCost = calculateTotalCost(order);
-        const profit = totalRevenue - totalCost;
+    // Iterate through all shipped sales orders
+    for (const salesOrder of allSalesOrders) {
+        const order = salesOrder.order;
 
-        // Exclude profit tax (30%)
-        const profitAfterTax = profit * 0.7;
+        if (order && order.offer) {
+            // Calculate total revenue
+            const totalRevenue = salesOrder.totalRevenue;
 
-        // Add profit to total
-        totalProfit += profitAfterTax;
+            // Calculate cost of goods sold
+            let costOfGoodsSold = salesOrder.totalCost;
+
+            // Check if the order contains more than 10 pieces of an offer
+            if (order.offer.products && order.offer.products.length > 10) {
+                // Reduce the total cost by 10%
+                costOfGoodsSold *= 0.9;
+            }
+
+            // Log total revenue and cost of goods sold for debugging
+            console.log(`Total Revenue: ${totalRevenue}`);
+            console.log(`Cost of Goods Sold: ${costOfGoodsSold}`);
+
+            // Check if totalRevenue and costOfGoodsSold are valid numbers
+            if (!isNaN(totalRevenue) && !isNaN(costOfGoodsSold)) {
+                // Calculate profit (excluding profit tax)
+                const profit = totalRevenue - costOfGoodsSold;
+
+                // Add profit to total
+                totalProfit += profit;
+            } else {
+                console.log("Invalid total revenue or cost of goods sold.");
+            }
+        }
     }
 
-    console.log(`Total profit generated from all sales orders: $${totalProfit.toFixed(2)}`);
+    console.log(`Sum of all profits (excluding profit tax): $${totalProfit}`);
 }
 
 
