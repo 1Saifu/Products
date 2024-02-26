@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import prompt from "prompt-sync";
-import { productsModel, offersModel, suppliersModel, ordersModel, categoriesModel, salesOrderModel } from "./create-database.js"
+import { productsModel, offersModel, suppliersModel, ordersModel, categoriesModel, salesOrderModel, } from "./create-database.js"
 
 const user = prompt();
 
@@ -324,10 +324,14 @@ else if (input == 8) {
     const product = await productsModel.findOne({ name: productName });
 
     if (product) {
+
+        const totalCost = product.price * quantity;
+
         await ordersModel.create({
             product: product._id,
             quantity: quantity,
-            status: "pending"
+            status: "pending",
+            totalCost: totalCost,  
         });
         console.log("Order created successfully.");
     } else {
@@ -339,28 +343,28 @@ else if (input == 9) {
     console.log("Creating an order for an offer.");
 
     // Display all offers to the user
-    const offers = await offersModel.find({}).populate('products'); // Assuming 'products' field holds product IDs
+    const offers = await offersModel.find({}).populate('products'); 
     console.log("Available offers:");
     offers.forEach((offer, index) => {
-        // Assuming offer documents contain a 'products' field with product names after population
+   
         const productNames = offer.products.map(product => product.name).join(", ");
         console.log(`${index + 1}. Offer ID: ${offer._id}, Products: ${productNames}, Price: $${offer.price}`);
     });
 
-    // Prompt the user to select an offer
+    
     const offerIndex = parseInt(user("Enter the number of the offer you want to order: ")) - 1;
     
     const selectedOffer = offers[offerIndex];
 
-    // Prompt for the quantity
+   
     const quantity = parseInt(user("Enter the quantity: "));
-
 
     // Create the order for the selected offer
     const newOrder = new ordersModel({
         offer: selectedOffer._id,
         quantity: quantity,
         status: "pending",
+        totalCost: totalCost,
     });
 
     // Save the order
@@ -374,6 +378,7 @@ else if (input == 10) {
     console.log("Select an order to ship:");
 
     const allOrders = await ordersModel.find({ status: "pending" }).populate("product offer");
+
     if (!allOrders.length) {
         console.log("No pending orders found.");
     } else {
@@ -388,8 +393,28 @@ else if (input == 10) {
         } else {
             const selectedOrder = allOrders[selectedOrderIndex];
 
+
+            async function calculateTotalCost(order) {
+                let totalCost = 0;
+
+                if (order.product) {
+                    // If the order is for a product, calculate cost based on product cost and quantity
+                    const product = await productsModel.findById(order.product);
+                    totalCost = product.cost * order.quantity;
+                } else if (order.offer) {
+                    // If the order is for an offer, calculate cost based on offer price and quantity
+                    const offer = await offersModel.findById(order.offer);
+                    totalCost = offer.price * order.quantity;
+                }
+
+                return totalCost;
+            }
+
+            const totalCost = await calculateTotalCost(selectedOrder)
+
             // Update order status to "shipped"
             selectedOrder.status = "shipped";
+            selectedOrder.totalCost = totalCost;
 
             // Update stock quantities of products and offers
             if (selectedOrder.product) {
@@ -405,8 +430,19 @@ else if (input == 10) {
                 console.log("Offer stock updated.");
             }
 
-            await selectedOrder.save(); // Save the changes to the order
-            console.log("Order shipped successfully.");
+                await selectedOrder.save(); 
+                console.log("Order shipped successfully.");
+    
+    
+                const salesRecord = await salesOrderModel.create({
+                    order: selectedOrder._id,
+                    status: selectedOrder.status,
+                    totalCost: totalCost,
+                });
+    
+                await salesRecord.save();
+                console.log("Order added to the sales collection.");
+            
         }
     }
 }
