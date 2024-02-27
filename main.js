@@ -359,6 +359,9 @@ else if (input == 9) {
    
     const quantity = parseInt(user("Enter the quantity: "));
 
+
+    const totalCost = selectedOffer.price * quantity;
+
     // Create the order for the selected offer
     const newOrder = new ordersModel({
         offer: selectedOffer._id,
