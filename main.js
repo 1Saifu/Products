@@ -399,20 +399,20 @@ else if (input == 10) {
 
                 if (order.product) {
                     const product = await productsModel.findById(order.product);
-                    totalCost = product.price * order.quantity; // Use product price
+                    totalCost = product.cost * order.quantity; // Use product cost
                 } else if (order.offer) {
                     const offer = await offersModel.findById(order.offer);
-                    totalCost = offer.price * order.quantity; // Use offer price
+                    totalCost = offer.cost * order.quantity; // Use offer cost
                 } else if (order.products && order.products.length > 10) {
                     // If the order contains more than 10 products, apply a 10% discount
                     const products = await productsModel.find({ _id: { $in: order.products } });
                     let subTotal = 0;
 
                     for (const product of products) {
-                        subTotal += product.price * order.quantity; // Use product price
+                        subTotal += product.cost * order.quantity; // Use product cost
                     }
 
-                    totalCost = subTotal; // Apply the discount
+                    totalCost = subTotal * 0.9; // Apply the discount
                 }
 
                 return totalCost;
@@ -422,41 +422,49 @@ else if (input == 10) {
 
             // Calculate total revenue (price - cost of the product)
             let totalRevenue = 0;
+            let profit = 0;
             if (selectedOrder.product) {
                 const product = await productsModel.findById(selectedOrder.product);
                 totalRevenue = product.price * selectedOrder.quantity;
-                totalCost = product.cost * selectedOrder.quantity; // Use product cost for total cost
+                profit = (totalRevenue - totalCost) * 0.7; // Correct calculation for profit
             } else if (selectedOrder.offer) {
                 const offer = await offersModel.findById(selectedOrder.offer);
-                totalRevenue = (offer.price - totalCost); // Assuming totalCost includes the cost of products in the offer
+                totalRevenue = offer.price * selectedOrder.quantity;
+                profit = (totalRevenue - totalCost) * 0.7; // Correct calculation for profit
             }
 
-            // Calculate profit
-            const profit = totalRevenue * 0.7; // 70% profit
-
-            // Calculate tax after profit (assuming 30% tax on profit)
-            const taxAfterProfit = profit * 0.3; // 30% tax on profit
+            // Calculate profit after tax (assuming 30% tax on profit)
+            const profitAfterTax = profit - (profit * 0.3); // Correct calculation for profit after tax
 
             // Update order status to "shipped"
             selectedOrder.status = "shipped";
             selectedOrder.totalCost = totalCost;
 
             // Update stock quantities of products and offers
-            // ... (same as before)
+            if (selectedOrder.product) {
+                const product = await productsModel.findById(selectedOrder.product);
+                product.stock -= selectedOrder.quantity; // Reduce product stock
+                await product.save();
+            } else if (selectedOrder.offer) {
+                const offer = await offersModel.findById(selectedOrder.offer);
+                offer.stock -= selectedOrder.quantity; // Reduce offer stock
+                await offer.save();
+            }
 
             await selectedOrder.save(); 
             console.log("Order shipped successfully.");
 
             console.log(`Total Revenue: $${totalRevenue}`);
-            console.log(`Profit After Tax: $${profit - taxAfterProfit}`);
-    
+            console.log(`Profit: $${profit}`);
+            console.log(`Profit After Tax: $${profitAfterTax}`);
+
             const salesRecord = await salesOrderModel.create({
                 order: selectedOrder._id,
                 status: selectedOrder.status,
                 totalCost: totalCost,
                 totalRevenue: totalRevenue,
                 profit: profit,
-                profitAfterTax: profit - taxAfterProfit,
+                profitAfterTax: profitAfterTax,
             });
 
             await salesRecord.save();
@@ -464,6 +472,8 @@ else if (input == 10) {
         }
     }
 }
+
+
 
 
 else if (input == 11) {
