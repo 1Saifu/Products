@@ -394,19 +394,21 @@ else if (input == 10) {
         } else {
             const selectedOrder = allOrders[selectedOrderIndex];
 
-            let totalCost = 0;
+            let totalCost;
 
 
             if (selectedOrder.product) {
                 const product = await productsModel.findById(selectedOrder.product);
                 totalCost = product.cost * selectedOrder.quantity; // Use product cost
+
+                if (selectedOrder.quantity > 10) {
+                    // If the order quantity is more than 10, apply a 10% discount
+                    totalCost = totalCost * 0.9;
+                }
             } else if (selectedOrder.offer) {
                 const offer = await offersModel.findById(selectedOrder.offer);
                 totalCost = offer.cost * selectedOrder.quantity; // Use offer cost
-            } else if (selectedOrder.quantity > 10) {
-                // If the order quantity is more than 10, apply a 10% discount
-                totalCost = totalCost * 0.9;
-            }
+            } 
 
             // Calculate total revenue (price - cost of the product)
             let totalRevenue = 0;
@@ -518,15 +520,17 @@ else if (input == 13) {
     const allSalesOrders = await salesOrderModel.find({});
 
     // Display details of each sales order
-    allSalesOrders.forEach((salesOrder, index) => {
+    for (const salesOrder of allSalesOrders) {
         console.log("-------------------------------------------");
-        console.log(`Sales Order ${index + 1}:`);
-        console.log(`Order Number: ${salesOrder._id}`);
+        console.log(`Sales Order ID: ${salesOrder._id}`);
         console.log(`Date: ${salesOrder.orderDate}`);
         console.log(`Status: ${salesOrder.status}`);
         console.log(`Total Cost: $${salesOrder.totalCost}`);
+        console.log(`Total Revenue: $${salesOrder.totalRevenue}`);
+        console.log(`Profit: $${salesOrder.profit}`);
+        console.log(`Profit After Tax: $${salesOrder.profitAfterTax}`);
         console.log("-------------------------------------------");
-    });
+    }
 
     if (allSalesOrders.length === 0) {
         console.log("No sales orders found.");
@@ -534,66 +538,30 @@ else if (input == 13) {
 }
 
 
+
+
 else if (input == 14) {
+    console.log("Calculating sum of all profits (without tax):");
+
+    // Aggregate total profit from all sales orders
     const profitData = await salesOrderModel.aggregate([
-        {
-            $match: { status: "shipped" }
-        },
-        {
-            $lookup: {
-                from: "orders",
-                localField: "order",
-                foreignField: "_id",
-                as: "orderDetails"
-            }
-        },
-        {
-            $lookup: {
-                from: "offers",
-                localField: "orderDetails.offer",
-                foreignField: "_id",
-                as: "offerDetails"
-            }
-        },
-        {
-            $project: {
-                profitBeforeTax: {
-                    $cond: {
-                        if: {
-                            $gt: [{ $size: "$orderDetails.products" }, 10]
-                        },
-                        then: {
-                            $subtract: [
-                                "$totalCost",
-                                { $multiply: ["$totalCost", 0.1] } // Assuming a 10% discount
-                            ]
-                        },
-                        else: "$totalCost"
-                    }
-                },
-            }
-        },
-        {
-            $project: {
-                profit: {
-                    $multiply: ["$profitBeforeTax", 0.7] // Apply 70% profit
-                },
-            }
-        },
         {
             $group: {
                 _id: null,
-                totalProfit: { $sum: "$profit" } // Summing up profit without tax
+                totalProfit: { $sum: "$profit" } // Summing up the profit field
             }
         }
     ]);
 
+    // Check if there is any profit data
     if (profitData.length > 0) {
-        console.log(`Sum of all profits (without tax): $${profitData[0].totalProfit}`);
+        const totalProfit = profitData[0].totalProfit;
+        console.log(`Sum of all profits (without tax): $${totalProfit}`);
     } else {
-        console.log("No shipped orders found.");
+        console.log("No profit data found.");
     }
 }
+
 
 
 
